@@ -1,17 +1,19 @@
 use rand::Rng;
 use std::collections::HashMap;
 
-const NUM_CHUNKS = 8;
+const NUM_CHUNKS: i32 = 8;
+const MIN_SIZE: i32 = 8;
+const MAX_SIZE: i32 = 2048;
 
 fn main() {
 
-    let mut over_num = 4096;
+    let mut over_num = MIN_SIZE;
 
     let mut median: HashMap<String, f32> = HashMap::new();
     let mut mean: HashMap<String, f32> = HashMap::new();
     let mut variance: HashMap<String, f32> = HashMap::new();
 
-    while over_num <= 1048576 {
+    while over_num <= MAX_SIZE {
        
         let mut max_counts: Vec<Vec<i32>> = Vec::new();
         for _ in 0..NUM_CHUNKS {
@@ -36,9 +38,6 @@ fn main() {
             let mut max = 0;
             let mut cur_chunk = 1;
 
-            //let mut count: HashMap<i32,i32> = HashMap::new();
-            //let mut count_list: Vec<i32> = Vec::new();
-
             for (i, num) in arr.iter().enumerate() {
                 let key = num - (i as i32) - 1;
                 let key = key.abs();
@@ -50,50 +49,24 @@ fn main() {
                     max = 0;
                     cur_chunk += 1;
                 }
-                //count_list.push(key);
-                //let cur_count = count.entry(key).or_insert(0);
-                //*cur_count += 1;
             }
-
-            //max_counts.push(max);
-
-            //println!("{:?}", arr);
-            //println!("{:?}", count_list);
-            //println!("{:?}", count);
-            //println!("{}: {}", over_num, count.len());
-    
         }
    
         // find mean and variance and add it to overall map
-
         for (i, counts) in max_counts.iter().enumerate() {
-            let sum: i32 = counts.iter().sum();
-            let sum: f32 = sum as f32 / counts.len() as f32;
+            let (sum, dist_sum) = mean_and_variance(counts);
+            
             mean.insert(format!("{}chunk{}", over_num, i+1), sum);
             println!("mean for {} chunk {}: {}", over_num, i+1, sum);
             
-            // now variance
-            let mut dist_sum: f32 = 0.0;
-            for x in counts.iter() {
-                dist_sum = dist_sum + ((*x as f32 - sum).powi(2));
-            }
-            dist_sum = dist_sum / (counts.len() - 1) as f32;
-            // if you prefer std deviation...
-            //dist_sum = dist_sum.sqrt();
             variance.insert(format!("{}chunk{}", over_num, i+1), dist_sum);
             println!("variance for {} chunk {}: {}", over_num, i+1, dist_sum);
         }
 
         // find median and add it to overall map
-        for (i, c) in max_counts.iter().enumerate() {
-            let mut counts = c.to_vec();
-            counts.sort();
-            let mid = counts.len() / 2;
-            let median_val: f32 = if counts.len() % 2 == 0 {
-                (counts[mid - 1] as f32 + counts[mid] as f32) / 2 as f32
-            } else {
-                counts[mid] as f32
-            };
+        for (i, counts) in max_counts.iter().enumerate() {
+            let median_val: f32 = median_vec(counts);
+            
             median.insert(format!("{}chunk{}", over_num, i+1), median_val);
 
             println!("median for {} chunk {}: {}", over_num, i+1, median_val);
@@ -106,3 +79,32 @@ fn main() {
     println!("Median: {:?}", median);
     println!("Variance: {:?}", variance);
 }
+
+fn mean_and_variance(counts: &Vec<i32>) -> (f32, f32) {
+    let sum: i32 = counts.iter().sum();
+    let sum: f32 = sum as f32 / counts.len() as f32;
+    
+    // now variance
+    let mut dist_sum: f32 = 0.0;
+    for x in counts.iter() {
+        dist_sum = dist_sum + ((*x as f32 - sum).powi(2));
+    }
+    dist_sum = dist_sum / (counts.len() - 1) as f32;
+    
+    // if you prefer std deviation...
+    //dist_sum = dist_sum.sqrt();
+    
+    (sum, dist_sum)
+}
+
+fn median_vec(c: &Vec<i32>) -> f32 {
+    let mut counts = c.to_vec();
+    counts.sort();
+    let mid = counts.len() / 2;
+    if counts.len() % 2 == 0 {
+        (counts[mid - 1] as f32 + counts[mid] as f32) / 2 as f32
+    } else {
+        counts[mid] as f32
+    }
+}
+
